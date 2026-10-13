@@ -8,11 +8,11 @@ Todo el proyecto vive en un único archivo `taller.html`. No necesita servidor, 
 
 ## Cómo ejecutarlo
 
-1. Descarga o clona el repositorio.
-2. Abre `taller.html` con cualquier navegador moderno (Chrome, Firefox, Edge, Safari). Doble clic es suficiente.
+1. Descarga o clona el repositorio. Hazlo ejecutando el comando: git clone https://github.com/CPJAVI/Taller-de-bicicletas.git
+2. Abre `taller.html` haciendo clic. 
 3. Ya puedes usar la aplicación.
 
-No hace falta instalar nada. Si quieres que los datos persistan entre navegadores o equipos, tendrías que montar un backend (ver *Mejoras futuras*).
+No hace falta instalar nada por ahora dado que es un ejercicio sencillo. Pero de cara al futuro estaría dispuesto a trabajar para desarrollar un backend (ver *Mejoras futuras*).
 
 ---
 
@@ -23,7 +23,7 @@ No hace falta instalar nada. Si quieres que los datos persistan entre navegadore
 Hay dos roles: **cliente** y **administrador**.
 
 - **Administrador**: usuario `admin`, contraseña `admin`. Es un usuario fijo definido en el código, no se registra ni se guarda en `localStorage`.
-- **Cliente**: se registra él mismo desde la pantalla de inicio.
+- **Cliente**: se registra él mismo desde la pantalla de inicio (si no hay cliente debes crear cuenta)
 
 Según con qué rol entres, la aplicación te lleva a un panel distinto.
 
