@@ -8,7 +8,7 @@ Todo el proyecto vive en un único archivo `taller.html`. No necesita servidor, 
 
 ## Cómo ejecutarlo
 
-1. Descarga o clona el repositorio. Hazlo ejecutando el comando: git clone https://github.com/CPJAVI/Taller-de-bicicletas.git
+1. Descarga o clona el repositorio. Hazlo ejecutando el comando: `git clone https://github.com/CPJAVI/Taller-de-bicicletas.git`
 2. Abre `taller.html` haciendo clic. 
 3. Ya puedes usar la aplicación.
 
@@ -102,8 +102,8 @@ Si quieres empezar de cero, abre las herramientas de desarrollo del navegador �
 ## Mejoras futuras
 
 - Backend con API REST y base de datos real.
+- Posibilidad de sustituir el admin y en su lugar crear dos tipos de usuarios: clientes (con las funciones de clientes que tienen en esta ocasión) y mecánicos (mismas funciones que admin para reparar bicicletas y consultar datos de clientes)
 - Hash de contraseñas con bcrypt o similar.
-- Historial de cambios de estado por reparación, con fecha y usuario.
 - Filtros por estado, cliente o fecha en el panel del admin.
 - Búsqueda por código de reparación o de cliente.
 - Exportar órdenes a CSV.
@@ -114,6 +114,7 @@ Si quieres empezar de cero, abre las herramientas de desarrollo del navegador �
 
 ## Uso de IA
 
-Se ha utilizado IA como apoyo para estructurar la solución, revisar el código y redactar esta documentación. Todas las decisiones finales y las comprobaciones se han hecho manualmente: creación de cuentas, creación de órdenes, cambio de estados desde el admin, persistencia tras recargar, borrado en cascada al eliminar un cliente, validación de teléfono y contraseñas, y comportamiento del registro frente a usuarios duplicados.
+Se ha utilizado la IA de DeepSeek como apoyo para estructurar la solución, revisar el código y redactar esta documentación. No obstante, las decisiones finales y las comprobaciones se han hecho manualmente.
+Pruebas realizadas: creación de cuentas, creación de órdenes, cambio de estados desde el admin, persistencia tras recargar, borrado en cascada al eliminar un cliente, validación de teléfono y contraseñas, y comportamiento del registro frente a usuarios duplicados.
 
 No se han introducido datos personales reales ni información confidencial.
