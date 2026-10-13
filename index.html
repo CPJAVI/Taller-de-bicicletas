@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Taller de bicicletas</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 2rem; background: #f6f7f9; color: #222; }
+  .container { max-width: 1000px; margin: 0 auto; }
+  h1 { margin-top: 0; }
+  h2 { margin-top: 2rem; }
+  form { display: grid; gap: .8rem; max-width: 480px; background: #fff; padding: 1.2rem; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+  label { display: grid; gap: .3rem; font-weight: 600; }
+  input, textarea, select, button { font: inherit; padding: .55rem; border: 1px solid #ccc; border-radius: 4px; }
+  textarea { min-height: 70px; resize: vertical; }
+  button { background: #0d6efd; color: #fff; border: none; cursor: pointer; font-weight: 600; }
+  button:hover { background: #0b5ed7; }
+  button.secundario { background: #6c757d; } button.secundario:hover { background: #5a6268; }
+  button.peligro    { background: #dc3545; } button.peligro:hover    { background: #bb2d3b; }
+  .link-btn { background: none; color: #0d6efd; padding: 0; text-decoration: underline; font-weight: 400; }
+  .link-btn:hover { background: none; }
+  .error { color: #dc3545; font-size: .9rem; min-height: 1.1em; }
+  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.08); margin-top: 1rem; }
+  th, td { padding: .7rem; border-bottom: 1px solid #eee; text-align: left; vertical-align: top; }
+  th { background: #e9ecef; }
+  .barra { display: flex; justify-content: space-between; align-items: center; gap: 1rem; background: #fff; padding: .8rem 1rem; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.08); margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .barra div { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+  .tabs { display: flex; gap: 1rem; margin: 1rem 0; }
+  .aviso-admin { background: #d1e7dd; border-left: 4px solid #198754; padding: .6rem .8rem; border-radius: 4px; margin-bottom: 1rem; }
+  .codigo { font-family: ui-monospace, Menlo, Consolas, monospace; background: #eef2ff; padding: .15rem .5rem; border-radius: 4px; font-weight: 700; letter-spacing: .06em; }
+</style>
+</head>
+<body>
+<div class="container" id="app"></div>
+
+<script>
+const KEY_USUARIOS = 'taller_usuarios_v1';
+const KEY_ORDENES  = 'taller_ordenes_v1';
+const KEY_SESION   = 'taller_sesion_v1';
+const ESTADOS = ['Pendiente', 'En reparación', 'Terminada'];
+const ADMIN_USER = 'admin';
+const ADMIN_PASS = 'admin';
+
+const cargarUsuarios  = () => { try { return JSON.parse(localStorage.getItem(KEY_USUARIOS)) || []; } catch { return []; } };
+const guardarUsuarios = u => localStorage.setItem(KEY_USUARIOS, JSON.stringify(u));
+const cargarOrdenes   = () => { try { return JSON.parse(localStorage.getItem(KEY_ORDENES))  || []; } catch { return []; } };
+const guardarOrdenes  = o => localStorage.setItem(KEY_ORDENES, JSON.stringify(o));
+const getSesion       = () => { try { return JSON.parse(localStorage.getItem(KEY_SESION)); } catch { return null; } };
+const setSesion       = s => s ? localStorage.setItem(KEY_SESION, JSON.stringify(s)) : localStorage.removeItem(KEY_SESION);
+
+const escapeHtml = t => String(t)
+  .replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')
+  .replaceAll('"','&quot;').replaceAll("'",'&#039;');
+
+const app = document.getElementById('app');
+
+/* ---------- códigos ---------- */
+function generarCodigoCliente() {
+  const usuarios = cargarUsuarios();
+  let codigo;
+  do {
+    codigo = String(Math.floor(100000 + Math.random() * 900000));
+  } while (usuarios.some(u => u.codigo === codigo));
+  return codigo;
+}
+
+function generarCodigoReparacion() {
+  const ordenes = cargarOrdenes();
+  let codigo;
+  do {
+    codigo = String(Math.floor(100000 + Math.random() * 900000));
+  } while (ordenes.some(o => o.codigo === codigo));
+  return codigo;
+}
+
+/* ---------- router muy simple ---------- */
+function render() {
+  const sesion = getSesion();
+  if (!sesion) return renderAuth('login');
+  if (sesion.rol === 'admin') return renderAdmin();
+  return renderCliente(sesion.usuario);
+}
+
+/* ---------- login / registro ---------- */
+function renderAuth(vista = 'login') {
+  app.innerHTML = `
+    <h1>Taller de bicicletas</h1>
+
+    <div class="tabs">
+      <button class="link-btn" id="tabLogin"    ${vista==='login'    ? 'style="font-weight:700"' : ''}>Iniciar sesión</button>
+      <button class="link-btn" id="tabRegistro" ${vista==='registro' ? 'style="font-weight:700"' : ''}>Crear cuenta</button>
+    </div>
+
+    ${vista === 'login' ? `
+      <form id="formLogin">
+        <label>Usuario <input id="loginUsuario" required autocomplete="username"></label>
+        <label>Contraseña <input id="loginPassword" type="password" required autocomplete="current-password"></label>
+        <div class="error" id="loginError"></div>
+        <button type="submit">Entrar</button>
+      </form>
+    ` : `
+      <form id="formRegistro">
+        <label>Usuario <input id="regUsuario" required autocomplete="username"></label>
+        <label>Contraseña <input id="regPassword" type="password" required autocomplete="new-password"></label>
+        <label>Repite la contraseña <input id="regPassword2" type="password" required autocomplete="new-password"></label>
+        <label>Teléfono (solo dígitos)
+          <input id="regTelefono" required inputmode="numeric" pattern="\\d+" placeholder="Ej: 600123456" autocomplete="tel">
+        </label>
+        <div class="error" id="regError"></div>
+        <button type="submit">Crear cuenta</button>
+      </form>
+    `}
+  `;
+
+  document.getElementById('tabLogin').onclick    = () => renderAuth('login');
+  document.getElementById('tabRegistro').onclick = () => renderAuth('registro');
+
+  const fLogin = document.getElementById('formLogin');
+  if (fLogin) fLogin.onsubmit = e => {
+    e.preventDefault();
+    const usuario  = document.getElementById('loginUsuario').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    const err      = document.getElementById('loginError');
+
+    if (usuario === ADMIN_USER && password === ADMIN_PASS) {
+      setSesion({ usuario: ADMIN_USER, rol: 'admin' });
+      return render();
+    }
+
+    const ok = cargarUsuarios().some(u => u.usuario === usuario && u.password === password);
+    if (!ok) { err.textContent = 'Usuario o contraseña incorrectos.'; return; }
+
+    setSesion({ usuario, rol: 'cliente' });
+    render();
+  };
+
+  const fReg = document.getElementById('formRegistro');
+  if (fReg) fReg.onsubmit = e => {
+    e.preventDefault();
+    const usuario   = document.getElementById('regUsuario').value.trim();
+    const password  = document.getElementById('regPassword').value;
+    const password2 = document.getElementById('regPassword2').value;
+    const telefono  = document.getElementById('regTelefono').value.trim();
+    const err       = document.getElementById('regError');
+    err.textContent = '';
+
+    if (usuario.toLowerCase() === ADMIN_USER) { err.textContent = 'Ese usuario está reservado.'; return; }
+    if (usuario.length < 3)     { err.textContent = 'El usuario debe tener al menos 3 caracteres.'; return; }
+    if (password.length < 4)    { err.textContent = 'La contraseña debe tener al menos 4 caracteres.'; return; }
+    if (password !== password2) { err.textContent = 'Las contraseñas no coinciden.'; return; }
+    if (!/^\d+$/.test(telefono)) { err.textContent = 'El teléfono solo puede contener dígitos.'; return; }
+    if (telefono.length < 9)     { err.textContent = 'El teléfono debe tener al menos 9 dígitos.'; return; }
+    if (cargarUsuarios().some(u => u.usuario.toLowerCase() === usuario.toLowerCase())) {
+      err.textContent = 'Ese usuario ya existe.'; return;
+    }
+
+    const usuarios = cargarUsuarios();
+    const codigo   = generarCodigoCliente();
+    usuarios.push({ usuario, password, telefono, codigo });
+    guardarUsuarios(usuarios);
+    setSesion({ usuario, rol: 'cliente' });
+    render();
+  };
+}
+
+/* ---------- panel cliente ---------- */
+function renderCliente(usuario) {
+  const usuarios = cargarUsuarios();
+  const yo       = usuarios.find(u => u.usuario === usuario);
+  if (!yo) { setSesion(null); return render(); }
+
+  const ordenes = cargarOrdenes().filter(o => o.cliente === usuario);
+
+  app.innerHTML = `
+    <div class="barra">
+      <div>
+        Sesión: <strong>${escapeHtml(usuario)}</strong>
+        &nbsp;·&nbsp; Código de cliente: <span class="codigo">${escapeHtml(yo.codigo)}</span>
+      </div>
+      <div>
+        <button class="secundario" id="btnLogout">Cerrar sesión</button>
+        <button class="peligro"    id="btnBorrarCuenta">Eliminar mi cuenta</button>
+      </div>
+    </div>
+
+    <h1>Mis reparaciones</h1>
+
+    <h2>Nueva orden</h2>
+    <form id="formOrden">
+      <label>Descripción de la bicicleta
+        <input id="bici" required placeholder="Ej: Bicicleta de montaña, rueda 29">
+      </label>
+      <label>Problema comunicado
+        <textarea id="problema" required placeholder="Ej: La cadena se sale y los frenos rozan"></textarea>
+      </label>
+      <button type="submit">Crear orden</button>
+    </form>
+
+    <h2>Historial</h2>
+    ${ordenes.length === 0
+      ? '<p>Todavía no has creado ninguna orden.</p>'
+      : `<table>
+          <thead><tr><th>Código reparación</th><th>Código cliente</th><th>Bicicleta</th><th>Problema</th><th>Estado</th><th>Creada</th></tr></thead>
+          <tbody>
+            ${ordenes.map(o => `
+              <tr>
+                <td><span class="codigo">${escapeHtml(o.codigo)}</span></td>
+                <td><span class="codigo">${escapeHtml(o.clienteCodigo)}</span></td>
+                <td>${escapeHtml(o.bici)}</td>
+                <td>${escapeHtml(o.problema)}</td>
+                <td>${escapeHtml(o.estado)}</td>
+                <td>${new Date(o.creada).toLocaleString()}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>`}
+  `;
+
+  document.getElementById('btnLogout').onclick = () => { setSesion(null); render(); };
+
+  document.getElementById('btnBorrarCuenta').onclick = () => {
+    if (!confirm('¿Eliminar tu cuenta? Se borrarán también todas tus reparaciones. Esta acción no se puede deshacer.')) return;
+    guardarUsuarios(cargarUsuarios().filter(u => u.usuario !== usuario));
+    guardarOrdenes (cargarOrdenes() .filter(o => o.cliente !== usuario));
+    setSesion(null);
+    render();
+  };
+
+  document.getElementById('formOrden').onsubmit = e => {
+    e.preventDefault();
+    const bici     = document.getElementById('bici').value.trim();
+    const problema = document.getElementById('problema').value.trim();
+    if (!bici || !problema) return;
+
+    const ordenes = cargarOrdenes();
+    ordenes.push({
+      codigo: generarCodigoReparacion(),
+      cliente: usuario,
+      clienteCodigo: yo.codigo,
+      bici,
+      problema,
+      estado: 'Pendiente',
+      creada: new Date().toISOString()
+    });
+    guardarOrdenes(ordenes);
+    renderCliente(usuario);
+  };
+}
+
+/* ---------- panel admin ---------- */
+function renderAdmin() {
+  const ordenes  = cargarOrdenes();
+  const usuarios = cargarUsuarios();
+
+  app.innerHTML = `
+    <div class="barra">
+      <div>Sesión: <strong>admin</strong></div>
+      <div><button class="secundario" id="btnLogout">Cerrar sesión</button></div>
+    </div>
+
+    <h1>Panel de administración</h1>
+    <div class="aviso-admin">
+      Como administrador puedes cambiar estados y eliminar cuentas de cliente.
+      Los datos de contacto (teléfono) solo se muestran aquí.
+    </div>
+
+    <h2>Órdenes de reparación</h2>
+    ${ordenes.length === 0
+      ? '<p>No hay órdenes registradas.</p>'
+      : `<table>
+          <thead><tr><th>Código reparación</th><th>Código cliente</th><th>Bicicleta</th><th>Problema</th><th>Estado</th><th>Creada</th></tr></thead>
+          <tbody>
+            ${ordenes.map(o => `
+              <tr>
+                <td><span class="codigo">${escapeHtml(o.codigo)}</span></td>
+                <td><span class="codigo">${escapeHtml(o.clienteCodigo || '—')}</span></td>
+                <td>${escapeHtml(o.bici)}</td>
+                <td>${escapeHtml(o.problema)}</td>
+                <td>
+                  <select class="estado" data-codigo="${escapeHtml(o.codigo)}">
+                    ${ESTADOS.map(est => `<option value="${est}" ${est === o.estado ? 'selected' : ''}>${est}</option>`).join('')}
+                  </select>
+                </td>
+                <td>${new Date(o.creada).toLocaleString()}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>`}
+
+    <h2>Clientes</h2>
+    ${usuarios.length === 0
+      ? '<p>No hay clientes registrados.</p>'
+      : `<table>
+          <thead><tr><th>Código cliente</th><th>Usuario</th><th>Teléfono</th><th>Reparaciones</th><th></th></tr></thead>
+          <tbody>
+            ${usuarios.map(u => {
+              const n = ordenes.filter(o => o.cliente === u.usuario).length;
+              return `<tr>
+                <td><span class="codigo">${escapeHtml(u.codigo || '—')}</span></td>
+                <td>${escapeHtml(u.usuario)}</td>
+                <td>${escapeHtml(u.telefono || '—')}</td>
+                <td>${n}</td>
+                <td><button class="peligro" data-usuario="${escapeHtml(u.usuario)}">Eliminar cuenta</button></td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>`}
+  `;
+
+  document.getElementById('btnLogout').onclick = () => { setSesion(null); render(); };
+
+  app.querySelectorAll('.estado').forEach(sel => {
+    sel.onchange = () => {
+      const todas = cargarOrdenes();
+      const orden = todas.find(o => o.codigo === sel.dataset.codigo);
+      if (orden) { orden.estado = sel.value; guardarOrdenes(todas); }
+    };
+  });
+
+  app.querySelectorAll('button[data-usuario]').forEach(btn => {
+    btn.onclick = () => {
+      const usuario = btn.dataset.usuario;
+      if (!confirm(`¿Eliminar la cuenta "${usuario}" y todas sus reparaciones?`)) return;
+      guardarUsuarios(cargarUsuarios().filter(u => u.usuario !== usuario));
+      guardarOrdenes (cargarOrdenes() .filter(o => o.cliente !== usuario));
+      renderAdmin();
+    };
+  });
+}
+
+render();
+</script>
+</body>
+</html>
