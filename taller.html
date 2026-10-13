@@ -7,7 +7,7 @@
 <style>
   * { box-sizing: border-box; }
   body { font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 2rem; background: #f6f7f9; color: #222; }
-  .container { max-width: 1000px; margin: 0 auto; }
+  .container { max-width: 1100px; margin: 0 auto; }
   h1 { margin-top: 0; }
   h2 { margin-top: 2rem; }
   form { display: grid; gap: .8rem; max-width: 480px; background: #fff; padding: 1.2rem; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
@@ -18,6 +18,7 @@
   button:hover { background: #0b5ed7; }
   button.secundario { background: #6c757d; } button.secundario:hover { background: #5a6268; }
   button.peligro    { background: #dc3545; } button.peligro:hover    { background: #bb2d3b; }
+  button.mini { font-size: .85rem; padding: .3rem .6rem; font-weight: 500; }
   .link-btn { background: none; color: #0d6efd; padding: 0; text-decoration: underline; font-weight: 400; }
   .link-btn:hover { background: none; }
   .error { color: #dc3545; font-size: .9rem; min-height: 1.1em; }
@@ -29,6 +30,11 @@
   .tabs { display: flex; gap: 1rem; margin: 1rem 0; }
   .aviso-admin { background: #d1e7dd; border-left: 4px solid #198754; padding: .6rem .8rem; border-radius: 4px; margin-bottom: 1rem; }
   .codigo { font-family: ui-monospace, Menlo, Consolas, monospace; background: #eef2ff; padding: .15rem .5rem; border-radius: 4px; font-weight: 700; letter-spacing: .06em; }
+  .historial { margin-top: .5rem; padding: .5rem; background: #f8f9fa; border-left: 3px solid #0d6efd; border-radius: 4px; font-size: .9rem; }
+  .historial ul { margin: 0; padding-left: 1.2rem; }
+  .historial li { margin: .15rem 0; }
+  .historial .fecha { color: #666; }
+  details summary { cursor: pointer; font-weight: 600; color: #0d6efd; }
 </style>
 </head>
 <body>
@@ -201,7 +207,7 @@ function renderCliente(usuario) {
     ${ordenes.length === 0
       ? '<p>Todavía no has creado ninguna orden.</p>'
       : `<table>
-          <thead><tr><th>Código reparación</th><th>Código cliente</th><th>Bicicleta</th><th>Problema</th><th>Estado</th><th>Creada</th></tr></thead>
+          <thead><tr><th>Código reparación</th><th>Código cliente</th><th>Bicicleta</th><th>Problema</th><th>Estado</th><th>Creada</th><th>Historial</th></tr></thead>
           <tbody>
             ${ordenes.map(o => `
               <tr>
@@ -211,6 +217,20 @@ function renderCliente(usuario) {
                 <td>${escapeHtml(o.problema)}</td>
                 <td>${escapeHtml(o.estado)}</td>
                 <td>${new Date(o.creada).toLocaleString()}</td>
+                <td>
+                  <details>
+                    <summary>Ver</summary>
+                    <div class="historial">
+                      <ul>
+                        ${(o.historial || []).map(h => `
+                          <li>
+                            <strong>${escapeHtml(h.estado)}</strong>
+                            <span class="fecha">— ${new Date(h.fecha).toLocaleString()} (${escapeHtml(h.usuario)})</span>
+                          </li>`).join('')}
+                      </ul>
+                    </div>
+                  </details>
+                </td>
               </tr>`).join('')}
           </tbody>
         </table>`}
@@ -232,6 +252,7 @@ function renderCliente(usuario) {
     const problema = document.getElementById('problema').value.trim();
     if (!bici || !problema) return;
 
+    const ahora = new Date().toISOString();
     const ordenes = cargarOrdenes();
     ordenes.push({
       codigo: generarCodigoReparacion(),
@@ -240,7 +261,10 @@ function renderCliente(usuario) {
       bici,
       problema,
       estado: 'Pendiente',
-      creada: new Date().toISOString()
+      creada: ahora,
+      historial: [
+        { estado: 'Pendiente', fecha: ahora, usuario }
+      ]
     });
     guardarOrdenes(ordenes);
     renderCliente(usuario);
@@ -268,7 +292,7 @@ function renderAdmin() {
     ${ordenes.length === 0
       ? '<p>No hay órdenes registradas.</p>'
       : `<table>
-          <thead><tr><th>Código reparación</th><th>Código cliente</th><th>Bicicleta</th><th>Problema</th><th>Estado</th><th>Creada</th></tr></thead>
+          <thead><tr><th>Código reparación</th><th>Código cliente</th><th>Bicicleta</th><th>Problema</th><th>Estado</th><th>Creada</th><th>Historial</th></tr></thead>
           <tbody>
             ${ordenes.map(o => `
               <tr>
@@ -282,6 +306,20 @@ function renderAdmin() {
                   </select>
                 </td>
                 <td>${new Date(o.creada).toLocaleString()}</td>
+                <td>
+                  <details>
+                    <summary>Ver</summary>
+                    <div class="historial">
+                      <ul>
+                        ${(o.historial || []).map(h => `
+                          <li>
+                            <strong>${escapeHtml(h.estado)}</strong>
+                            <span class="fecha">— ${new Date(h.fecha).toLocaleString()} (${escapeHtml(h.usuario)})</span>
+                          </li>`).join('')}
+                      </ul>
+                    </div>
+                  </details>
+                </td>
               </tr>`).join('')}
           </tbody>
         </table>`}
@@ -312,7 +350,21 @@ function renderAdmin() {
     sel.onchange = () => {
       const todas = cargarOrdenes();
       const orden = todas.find(o => o.codigo === sel.dataset.codigo);
-      if (orden) { orden.estado = sel.value; guardarOrdenes(todas); }
+      if (!orden) return;
+
+      const nuevoEstado = sel.value;
+      if (nuevoEstado === orden.estado) return;
+
+      orden.estado = nuevoEstado;
+      orden.historial = orden.historial || [];
+      orden.historial.push({
+        estado: nuevoEstado,
+        fecha: new Date().toISOString(),
+        usuario: 'admin'
+      });
+
+      guardarOrdenes(todas);
+      renderAdmin();
     };
   });
 
